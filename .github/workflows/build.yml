@@ -29,5 +29,5 @@ jobs:
       - name: Build all packages
         run: go build ./...
 
-      - name: Test controller package
-        run: go test ./controller
+      - name: Test bridge packages
+        run: go test ./controller ./rest ./rpc ./tools
