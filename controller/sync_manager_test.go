@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pasarguard/node_bridge/common"
+	"github.com/hazhanhasani/node_bridge/common"
 )
 
 func TestSyncManager_Deduplication(t *testing.T) {
@@ -30,7 +30,6 @@ func TestSyncManager_Deduplication(t *testing.T) {
 	sm.UpdateUsers([]*common.User{u1})
 	sm.UpdateUsers([]*common.User{u1})
 
-	// Wait for sync
 	time.Sleep(100 * time.Millisecond)
 
 	mu.Lock()
@@ -55,14 +54,12 @@ func TestSyncManager_Chunking(t *testing.T) {
 
 	sm := NewSyncManager(context.Background(), syncer, nil)
 
-	// Update many users
 	users := make([]*common.User, 2500)
 	for i := 0; i < 2500; i++ {
 		users[i] = &common.User{Email: string(rune(i))}
 	}
 	sm.UpdateUsers(users)
 
-	// Wait for sync
 	time.Sleep(200 * time.Millisecond)
 
 	mu.Lock()
@@ -101,7 +98,6 @@ func TestSyncManager_BackoffAndHardReset(t *testing.T) {
 
 	sm.UpdateUsers([]*common.User{{Email: "fail@example.com"}})
 
-	// Wait for retries and hard reset
 	time.Sleep(5 * time.Second)
 
 	mu.Lock()
