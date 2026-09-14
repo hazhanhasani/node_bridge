@@ -1,4 +1,4 @@
-package gozargah_node_bridge
+package bluepanel_node_bridge
 
 import (
 	"context"
@@ -6,13 +6,13 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/pasarguard/node_bridge/common"
-	"github.com/pasarguard/node_bridge/controller"
-	"github.com/pasarguard/node_bridge/rest"
-	"github.com/pasarguard/node_bridge/rpc"
+	"github.com/hazhanhasani/node_bridge/common"
+	"github.com/hazhanhasani/node_bridge/controller"
+	"github.com/hazhanhasani/node_bridge/rest"
+	"github.com/hazhanhasani/node_bridge/rpc"
 )
 
-type PasarGuardNode interface {
+type BluePanelNode interface {
 	Start(string, common.BackendType, []*common.User, uint64) error
 	Stop()
 	NodeVersion() string
@@ -98,7 +98,7 @@ func WithLogChannelSize(size int) NodeOption {
 }
 
 // New creates a new node with the given address, protocol, and options
-func New(address string, nodeProtocol NodeProtocol, options ...NodeOption) (PasarGuardNode, error) {
+func New(address string, nodeProtocol NodeProtocol, options ...NodeOption) (BluePanelNode, error) {
 	if address == "" {
 		return nil, errors.New("address is empty")
 	}
@@ -117,7 +117,7 @@ func New(address string, nodeProtocol NodeProtocol, options ...NodeOption) (Pasa
 		}
 	}
 
-	var node PasarGuardNode
+	var node BluePanelNode
 	var err error
 	switch nodeProtocol {
 	case GRPC:
