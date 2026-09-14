@@ -1,4 +1,4 @@
-module github.com/pasarguard/node_bridge
+module github.com/hazhanhasani/node_bridge
 
 go 1.26.2
 
