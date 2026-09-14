@@ -6,7 +6,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/pasarguard/node_bridge/controller"
+	"github.com/hazhanhasani/node_bridge/controller"
 )
 
 func (n *Node) StreamLogs(ctx context.Context) (<-chan controller.LogEntry, error) {
@@ -19,7 +19,6 @@ func (n *Node) StreamLogs(ctx context.Context) (<-chan controller.LogEntry, erro
 	go func() {
 		defer close(logChan)
 
-		// Create a separate client for streaming (timeout = 0)
 		client := *n.client
 		client.Timeout = 0
 
@@ -30,7 +29,6 @@ func (n *Node) StreamLogs(ctx context.Context) (<-chan controller.LogEntry, erro
 		}
 		defer reader.Close()
 
-		// Close reader when context is done
 		go func() {
 			select {
 			case <-ctx.Done():
@@ -64,12 +62,10 @@ func pushLogEntry(ch chan controller.LogEntry, entry controller.LogEntry) {
 	select {
 	case ch <- entry:
 	default:
-		// Drop oldest
 		select {
 		case <-ch:
 		default:
 		}
-		// Non-blocking write to avoid deadlock if channel was emptied between selects
 		select {
 		case ch <- entry:
 		default:
