@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/pasarguard/node_bridge/common"
-	"github.com/pasarguard/node_bridge/controller"
+	"github.com/hazhanhasani/node_bridge/common"
+	"github.com/hazhanhasani/node_bridge/controller"
 )
 
 func (n *Node) StreamLogs(ctx context.Context) (<-chan controller.LogEntry, error) {
@@ -33,7 +33,6 @@ func (n *Node) StreamLogs(ctx context.Context) (<-chan controller.LogEntry, erro
 			default:
 				logEntry, err := logsStream.Recv()
 				if err != nil {
-					// Only push error if it's not a normal cancellation
 					if ctx.Err() == nil && n.ctx.Err() == nil {
 						pushLogEntry(logChan, controller.LogEntry{Err: err})
 					}
@@ -53,12 +52,10 @@ func pushLogEntry(ch chan controller.LogEntry, entry controller.LogEntry) {
 	select {
 	case ch <- entry:
 	default:
-		// Drop oldest
 		select {
 		case <-ch:
 		default:
 		}
-		// Non-blocking write to avoid deadlock if channel was emptied between selects
 		select {
 		case ch <- entry:
 		default:
