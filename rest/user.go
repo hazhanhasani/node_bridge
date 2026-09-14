@@ -8,8 +8,8 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"github.com/pasarguard/node_bridge/common"
-	"github.com/pasarguard/node_bridge/controller"
+	"github.com/hazhanhasani/node_bridge/common"
+	"github.com/hazhanhasani/node_bridge/controller"
 )
 
 func (n *Node) SyncUsers(users []*common.User) error {
