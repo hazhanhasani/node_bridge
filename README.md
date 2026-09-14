@@ -1,56 +1,50 @@
-# PasarGuard Node Bridge
+# BluePanel Node Bridge (Go)
 
-A Go library for To connect easy and stable to [PasarGuard-Node](https://github.com/PasarGuard/node).
+Go bridge used by **BluePanel** integrations to communicate with **BluePanel Node** over gRPC or REST.
 
 ## Installation
+
 ```bash
-go get github.com/pasarguard/node_bridge
+go get github.com/hazhanhasani/node_bridge@main
 ```
 
-## Usage Example
+## Usage example
 
 ```go
 package main
 
 import (
-	"fmt"
-	"log"
+    "fmt"
+    "log"
 
-	"github.com/google/uuid"
-	"github.com/pasarguard/node_bridge"
-	"github.com/pasarguard/node_bridge/common"
+    "github.com/google/uuid"
+    bridge "github.com/hazhanhasani/node_bridge"
+    "github.com/hazhanhasani/node_bridge/common"
 )
 
 func main() {
-	// Initialize the node client
-	apiKey := uuid.New() // Replace with your actual API key
-	node, err := node_bridge.New("127.0.0.1", node_bridge.GRPC,
-		node_bridge.WithPort(8080),
-		node_bridge.WithAPIKey(apiKey),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
+    apiKey := uuid.New()
 
-	// Start the node with a configuration
-	config := `{"inbounds": [], "outbounds": []}` // Your node configuration
-	err = node.Start(config, common.BackendType_XRAY, nil, 60)
-	if err != nil {
-		log.Fatal(err)
-	}
+    node, err := bridge.New("127.0.0.1", bridge.GRPC,
+        bridge.WithPort(62050),
+        bridge.WithAPIKey(apiKey),
+    )
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	// Get node information
-	info, err := node.Info()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Node Version: %s\n", info.NodeVersion)
-	fmt.Printf("Core Version: %s\n", info.CoreVersion)
+    config := `{"inbounds": [], "outbounds": []}`
+    if err := node.Start(config, common.BackendType_XRAY, nil, 60); err != nil {
+        log.Fatal(err)
+    }
+    defer node.Stop()
 
-	// Get system stats
-	stats, err := node.GetSystemStats()
-	if err == nil {
-		fmt.Printf("CPU Usage: %.2f%%\n", stats.CpuUsage)
-	}
+    info, err := node.Info()
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("BluePanel Node version: %s\n", info.NodeVersion)
 }
 ```
+
+This fork is maintained as part of the BluePanel stack and should be used instead of upstream bridge sources by BluePanel components.
