@@ -54,4 +54,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add common/service.pb.go common/service_grpc.pb.go
           git commit -m "chore: regenerate BluePanel protocol bindings"
-          git push
+          git pull --rebase origin main
+          git push origin main
