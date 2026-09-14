@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pasarguard/node_bridge/common"
+	"github.com/hazhanhasani/node_bridge/common"
 )
 
 const (
@@ -59,21 +59,17 @@ func (s *SyncManager) Run() {
 			return
 		}
 
-		// Drain pending users
 		users := make([]*common.User, 0, len(s.pending))
 		for _, u := range s.pending {
 			users = append(users, u)
 		}
-		// Clear pending map temporarily; we'll requeue failures
 		s.pending = make(map[string]*common.User)
 		s.mu.Unlock()
 
-		// Process all users (transport handles chunking)
 		err := s.syncer(users)
 
 		if err != nil {
 			s.failureCount++
-			// Requeue failed users (don't overwrite newer updates)
 			s.mu.Lock()
 			for _, u := range users {
 				if _, exists := s.pending[u.GetEmail()]; !exists {
@@ -89,7 +85,6 @@ func (s *SyncManager) Run() {
 				s.failureCount = 0
 			}
 
-			// Exponential backoff
 			select {
 			case <-s.ctx.Done():
 				s.mu.Lock()
@@ -102,12 +97,10 @@ func (s *SyncManager) Run() {
 					backoff = MaxBackoff
 				}
 			}
-			continue // Retry with backoff
+			continue
 		}
 
-		// Success
 		s.failureCount = 0
 		backoff = InitialBackoff
-		// Continue loop to check if more users were added during sync
 	}
 }
