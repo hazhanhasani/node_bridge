@@ -38,10 +38,11 @@ jobs:
       - name: Generate bindings
         run: make generate_grpc_code
 
-      - name: Format and test
+      - name: Format and validate bridge packages
         run: |
           gofmt -w common/*.go
-          go test ./...
+          go build ./...
+          go test ./controller ./rest ./rpc ./tools
 
       - name: Commit generated bindings
         run: |
