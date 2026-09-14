@@ -13,7 +13,7 @@ import (
 )
 
 type BluePanelNode interface {
-	Start(string, common.BackendType, []*common.User, uint64) error
+	Start(config string, backendType common.BackendType, users []*common.User, keepAlive uint64, excludeInbounds ...string) error
 	Stop()
 	NodeVersion() string
 	CoreVersion() string
@@ -22,8 +22,15 @@ type BluePanelNode interface {
 	GetSystemStats() (*common.SystemStatsResponse, error)
 	GetBackendStats() (*common.BackendStatsResponse, error)
 	GetStats(reset bool, name string, statType common.StatType) (*common.StatResponse, error)
+	GetOutboundsLatency(name string) (*common.LatencyResponse, error)
 	GetUserOnlineStat(string) (*common.OnlineStatResponse, error)
 	GetUserOnlineIpList(string) (*common.StatsOnlineIpListResponse, error)
+	ListRoutingRules() (*common.RoutingRulesResponse, error)
+	GetBalancerInfo(tag string) (*common.BalancerInfoResponse, error)
+	TestRoute(request *common.TestRouteRequest) (*common.RouteResult, error)
+	AddRoutingRule(rule string, shouldReset bool) error
+	RemoveRoutingRule(ruleTag string) error
+	OverrideBalancerTarget(balancerTag, target string) error
 	Health() controller.Health
 	UpdateUsers([]*common.User)
 	StreamLogs(context.Context) (<-chan controller.LogEntry, error)
@@ -37,7 +44,6 @@ const (
 	REST NodeProtocol = "REST"
 )
 
-// NodeOptions holds the configuration for creating a new node
 type NodeOptions struct {
 	address      string
 	port         int
@@ -48,10 +54,8 @@ type NodeOptions struct {
 	logChanSize  int
 }
 
-// NodeOption is a function type for configuring NodeOptions
 type NodeOption func(*NodeOptions) error
 
-// WithPort sets the port for the node
 func WithPort(port int) NodeOption {
 	return func(opts *NodeOptions) error {
 		if port <= 0 {
@@ -62,7 +66,6 @@ func WithPort(port int) NodeOption {
 	}
 }
 
-// WithServerCA sets the server CA certificate
 func WithServerCA(serverCA []byte) NodeOption {
 	return func(opts *NodeOptions) error {
 		opts.serverCA = serverCA
@@ -70,7 +73,6 @@ func WithServerCA(serverCA []byte) NodeOption {
 	}
 }
 
-// WithAPIKey sets the API key
 func WithAPIKey(apiKey uuid.UUID) NodeOption {
 	return func(opts *NodeOptions) error {
 		opts.apiKey = apiKey
@@ -78,7 +80,6 @@ func WithAPIKey(apiKey uuid.UUID) NodeOption {
 	}
 }
 
-// WithExtra sets extra configuration parameters
 func WithExtra(extra map[string]interface{}) NodeOption {
 	return func(opts *NodeOptions) error {
 		opts.extra = extra
@@ -97,20 +98,17 @@ func WithLogChannelSize(size int) NodeOption {
 	}
 }
 
-// New creates a new node with the given address, protocol, and options
 func New(address string, nodeProtocol NodeProtocol, options ...NodeOption) (BluePanelNode, error) {
 	if address == "" {
 		return nil, errors.New("address is empty")
 	}
 
-	// Initialize options with defaults
 	opts := &NodeOptions{
 		address:      address,
 		nodeProtocol: nodeProtocol,
 		extra:        make(map[string]interface{}),
 	}
 
-	// Apply all provided options
 	for _, option := range options {
 		if err := option(opts); err != nil {
 			return nil, err
