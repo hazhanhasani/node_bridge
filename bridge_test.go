@@ -1,4 +1,4 @@
-package gozargah_node_bridge
+package bluepanel_node_bridge
 
 import (
 	"context"
@@ -13,8 +13,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/pasarguard/node_bridge/common"
-	"github.com/pasarguard/node_bridge/tools"
+	"github.com/hazhanhasani/node_bridge/common"
+	"github.com/hazhanhasani/node_bridge/tools"
 )
 
 var (
