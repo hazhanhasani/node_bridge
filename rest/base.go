@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"io"
 	"net"
 	"net/http"
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/hazhanhasani/node_bridge/common"
@@ -32,48 +32,32 @@ func New(address string, port int, serverCA []byte, apiKey uuid.UUID, logChanSiz
 	if err != nil {
 		return nil, err
 	}
-
 	ctx, cancel := context.WithCancel(context.Background())
-
-	n := &Node{
+	return &Node{
 		Controller: controller.New(apiKey, logChanSize, extra),
-		client:     tools.CreateHTTPClient(certPool, address),
-		ctx:        ctx,
-		baseUrl:    "https://" + net.JoinHostPort(address, fmt.Sprintf("%d", port)),
+		client: tools.CreateHTTPClient(certPool, address),
+		ctx: ctx,
+		baseUrl: "https://" + net.JoinHostPort(address, fmt.Sprintf("%d", port)),
 		cancelFunc: cancel,
-	}
-
-	return n, nil
+	}, nil
 }
 
-func (n *Node) Start(config string, backendType common.BackendType, users []*common.User, keepAlive uint64) error {
+func (n *Node) Start(config string, backendType common.BackendType, users []*common.User, keepAlive uint64, excludeInbounds ...string) error {
 	if n.Health() != controller.NotConnected {
 		n.Stop()
 	}
-
 	n.mu.Lock()
 	defer n.mu.Unlock()
-
-	data := &common.Backend{
-		Type:      backendType,
-		Config:    config,
-		Users:     users,
-		KeepAlive: keepAlive,
-	}
-
-	n.client.Timeout = time.Second * 15
+	data := &common.Backend{Type: backendType, Config: config, Users: users, KeepAlive: keepAlive, ExcludeInbounds: excludeInbounds}
+	n.client.Timeout = 15 * time.Second
 	var info common.BaseInfoResponse
-	if err := n.createRequest(n.client, "POST", "start", data, &info); err != nil {
+	if err := n.createRequest(n.client, http.MethodPost, "start", data, &info); err != nil {
 		return err
 	}
-
 	n.Connect(info.GetNodeVersion(), info.GetCoreVersion())
-	n.client.Timeout = time.Second * 10
-
+	n.client.Timeout = 10 * time.Second
 	n.ctx, n.cancelFunc = context.WithCancel(context.Background())
-
 	n.StartSync(n.ctx, n.SyncUsers)
-
 	return nil
 }
 
@@ -83,18 +67,16 @@ func (n *Node) Stop() {
 	}
 	n.mu.Lock()
 	defer n.mu.Unlock()
-
 	n.cancelFunc()
 	n.Disconnect()
-	_ = n.createRequest(n.client, "PUT", "stop", &common.Empty{}, &common.Empty{})
+	_ = n.createRequest(n.client, http.MethodPut, "stop", &common.Empty{}, &common.Empty{})
 }
 
 func (n *Node) Info() (*common.BaseInfoResponse, error) {
 	var info common.BaseInfoResponse
-	if err := n.createRequest(n.client, "GET", "info", &common.Empty{}, &info); err != nil {
+	if err := n.createRequest(n.client, http.MethodGet, "info", &common.Empty{}, &info); err != nil {
 		return nil, err
 	}
-
 	return &info, nil
 }
 
@@ -103,27 +85,28 @@ func (n *Node) createRequest(client *http.Client, method, endpoint string, data 
 	if err != nil {
 		return err
 	}
-
 	req, err := http.NewRequest(method, n.baseUrl+"/"+endpoint, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("x-api-key", n.ApiKey())
-	if body != nil {
-		req.Header.Set("Content-Type", "application/x-protobuf")
-	}
-
-	do, err := client.Do(req)
+	req.Header.Set("Content-Type", "application/x-protobuf")
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
-	defer do.Body.Close()
-
-	responseBody, _ := io.ReadAll(do.Body)
-	if err = proto.Unmarshal(responseBody, response); err != nil {
-		return err
+	defer resp.Body.Close()
+	responseBody, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return readErr
 	}
-	return nil
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(responseBody))
+	}
+	if len(responseBody) == 0 {
+		return nil
+	}
+	return proto.Unmarshal(responseBody, response)
 }
 
 func (n *Node) createStreamingRequest(client *http.Client, method, endpoint string) (io.ReadCloser, error) {
@@ -132,16 +115,13 @@ func (n *Node) createStreamingRequest(client *http.Client, method, endpoint stri
 		return nil, err
 	}
 	req.Header.Set("x-api-key", n.ApiKey())
-
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
-
 	if resp.StatusCode != http.StatusOK {
 		defer resp.Body.Close()
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
-
 	return resp.Body, nil
 }
