@@ -3,11 +3,11 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"net"
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
@@ -30,58 +30,30 @@ func New(address string, port int, serverCA []byte, apiKey uuid.UUID, logChanSiz
 	if err != nil {
 		return nil, err
 	}
-
 	creds := credentials.NewClientTLSFromCert(certPool, "")
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(creds),
-	}
-
-	target := net.JoinHostPort(address, fmt.Sprintf("%d", port))
-
-	client, err := grpc.NewClient(target, opts...)
+	client, err := grpc.NewClient(net.JoinHostPort(address, fmt.Sprintf("%d", port)), grpc.WithTransportCredentials(creds))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gRPC client: %v", err)
 	}
-
 	ctx, cancel := createCtxWithMD(apiKey.String())
-
-	n := &Node{
-		Controller: controller.New(apiKey, logChanSize, extra),
-		ctx:        ctx,
-		client:     common.NewNodeServiceClient(client),
-		cancelFunc: cancel,
-	}
-
-	return n, nil
+	return &Node{Controller: controller.New(apiKey, logChanSize, extra), ctx: ctx, client: common.NewNodeServiceClient(client), cancelFunc: cancel}, nil
 }
 
-func (n *Node) Start(config string, backendType common.BackendType, users []*common.User, keepAlive uint64) error {
+func (n *Node) Start(config string, backendType common.BackendType, users []*common.User, keepAlive uint64, excludeInbounds ...string) error {
 	if n.Health() != controller.NotConnected {
 		n.Stop()
 	}
-
 	n.mu.Lock()
 	defer n.mu.Unlock()
-
-	req := &common.Backend{
-		Type:      backendType,
-		Config:    config,
-		Users:     users,
-		KeepAlive: keepAlive,
-	}
-
+	req := &common.Backend{Type: backendType, Config: config, Users: users, KeepAlive: keepAlive, ExcludeInbounds: excludeInbounds}
 	ctx, cancel := context.WithTimeout(n.ctx, 15*time.Second)
 	defer cancel()
-
 	info, err := n.client.Start(ctx, req)
 	if err != nil {
 		return err
 	}
-
 	n.Connect(info.GetNodeVersion(), info.GetCoreVersion())
-
 	n.StartSync(n.ctx, n.SyncUsers)
-
 	return nil
 }
 
@@ -91,28 +63,18 @@ func (n *Node) Stop() {
 	}
 	n.mu.Lock()
 	defer n.mu.Unlock()
-
 	n.cancelFunc()
 	n.Disconnect()
-
 	n.ctx, n.cancelFunc = createCtxWithMD(n.ApiKey())
-
 	ctx, cancel := context.WithTimeout(n.ctx, 5*time.Second)
 	defer cancel()
-
 	_, _ = n.client.Stop(ctx, nil)
 }
 
 func (n *Node) Info() (*common.BaseInfoResponse, error) {
 	ctx, cancel := context.WithTimeout(n.ctx, 5*time.Second)
 	defer cancel()
-
-	resp, err := n.client.GetBaseInfo(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return resp, nil
+	return n.client.GetBaseInfo(ctx, nil)
 }
 
 func createCtxWithMD(apiKey string) (context.Context, context.CancelFunc) {
