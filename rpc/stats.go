@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/pasarguard/node_bridge/common"
+	"github.com/hazhanhasani/node_bridge/common"
 )
 
 func (n *Node) GetSystemStats() (*common.SystemStatsResponse, error) {
