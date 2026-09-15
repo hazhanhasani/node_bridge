@@ -31,6 +31,19 @@ type BluePanelNode interface {
 	AddRoutingRule(rule string, shouldReset bool) error
 	RemoveRoutingRule(ruleTag string) error
 	OverrideBalancerTarget(balancerTag, target string) error
+	ListTorLocations() (*common.TorLocationsResponse, error)
+	GetTorLocation(id string) (*common.TorLocation, error)
+	CreateTorLocation(spec *common.TorLocationSpec) (*common.TorLocation, error)
+	UpdateTorLocation(spec *common.TorLocationSpec) (*common.TorLocation, error)
+	DeleteTorLocation(id string, purgeData bool) error
+	EnableTorLocation(id string) (*common.TorLocation, error)
+	DisableTorLocation(id string) (*common.TorLocation, error)
+	RestartTorLocation(id string) (*common.TorLocation, error)
+	NewTorIdentity(id string) (*common.TorLocation, error)
+	GetTorHealth(id string) (*common.TorLocation, error)
+	RepairTorLocation(id string) (*common.TorLocation, error)
+	TestTorLocation(id string) (*common.TorLocation, error)
+	ForceReconcileTor() (*common.TorReconcileResponse, error)
 	Health() controller.Health
 	UpdateUsers([]*common.User)
 	StreamLogs(context.Context) (<-chan controller.LogEntry, error)
